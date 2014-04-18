@@ -10,10 +10,10 @@ using namespace std;
 class CUDAejecutor : public ejecutor{
 public:
 
-	virtual int ejecutar ( int (*funcion)(int , int) ){
-            int x=funcion(3,2);
-            cout << "Opcion CUDA (" << x << ")" << endl;
-            return x;
+	virtual void ejecutar ( void (*funcion)(int, int, int, int*, int), int IA, int KK, int DT, int *TMX1 ){
+            cout << "Opcion CUDA" << endl;
+            funcion(IA,KK,DT,TMX1,0);//Considerando que la ejecucion solo lo hace el nodo principal
+            return;
         }
 
 };
