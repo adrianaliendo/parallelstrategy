@@ -73,21 +73,21 @@ int main(int argc, char** argv) {
             cout << "Ejecutado (MPI) en:" << (final - inicio)*1000 << ": ms" << endl;
         }
         
-        inicio=MPI::Wtime();
-        para_determinar_estrategia=suma;
-        auxiliar.setEjecutor(&muestraOpenMP);
-        auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
-        final=MPI::Wtime();
         if(idnode==0){
+            inicio=MPI::Wtime();
+            para_determinar_estrategia=suma;
+            auxiliar.setEjecutor(&muestraOpenMP);
+            auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
+            final=MPI::Wtime();
             cout << "Ejecutado (OpenMP) en:" << (final - inicio)*1000 << ": ms" << endl;
         }
 
-        inicio=MPI::Wtime();
-        para_determinar_estrategia=sumagpu;
-        auxiliar.setEjecutor(&muestraCUDA); //Si ahora lo quiero ejecutar con otra estrategia, cambio el objeto ejecutor
-        auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
-        final=MPI::Wtime();
         if(idnode==0){
+            inicio=MPI::Wtime();
+            para_determinar_estrategia=sumagpu;
+            auxiliar.setEjecutor(&muestraCUDA); //Si ahora lo quiero ejecutar con otra estrategia, cambio el objeto ejecutor
+            auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
+            final=MPI::Wtime();
             cout << "Ejecutado (CUDA) en:" << (final - inicio)*1000 << ": ms" << endl;
         }
 
