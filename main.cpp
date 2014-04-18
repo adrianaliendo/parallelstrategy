@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string.h>
 #include <mpi.h>
 #include "omp.h"
 #include "ejecucion.h"
@@ -42,11 +43,13 @@ void sumagpu(int IA, int KK, int DT, int *TMX1, int idn){
  * se debe setear la estrategia
 */
 int main(int argc, char** argv) {
-    char op='n';
-    /*cout << "argc:" << argc << endl;
-    if (argc>1 && argv[1]=="op")
-        op=(char) argv[2];*/
+    //Se leen los argumentos de entrada
     
+    //Para seleccionar/indicar la estrategia a usar 
+    char op='n';//Se usa esta opcion en caso de que no se indique ninguna opcion
+    if (argc>1 && strcmp(argv[1],"-op")==0)
+        op=argv[2][0]; 
+
     
     MPI::Init(argc,argv);
     MPI::COMM_WORLD.Set_errhandler(MPI::ERRORS_THROW_EXCEPTIONS);
