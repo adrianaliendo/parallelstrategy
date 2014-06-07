@@ -12,31 +12,32 @@ using namespace std;
 class MPIejecutor : public ejecutor {
 public:
 
-	virtual void ejecutar ( void (*funcion)(int, int, int, int*, int), int IA, int KK, int DT, int *TMX1 ){
-            cout << "Opcion MPI" << endl;
-
-            int idnode = MPI::COMM_WORLD.Get_rank();
-            //cout << idnode << endl;
-            int numtask = MPI::COMM_WORLD.Get_size();    
-            //cout << numtask << endl;
+	virtual void ejecutar (procedimiento* xejecutar){//void (*funcion)(int, int, int, int*, int, int), int IA, int KK, int DT, int *TMX1 ){
+            setProcedimiento(xejecutar);
             
-            int div=ceil((float)IA/numtask);
+            int idnode = MPI::COMM_WORLD.Get_rank();
+            
+            //Esta informacion deberia obtenerla/verificarla del json
+            int numtask = MPI::COMM_WORLD.Get_size();    
+
+            //Variables auxiliares
+            int div=ceil((float)xejecutar->getsize()/numtask);
             int TMX[div];
-            int mod=IA%numtask;
-            bool flag;
+            int mod=xejecutar->getsize()%numtask;
+            bool flag=false;
             
             if(mod==0) flag=true;
-            else flag=false;
-            
-            
-            
-            if (flag ||  (!flag && idnode!=numtask-1) ){
-                funcion(div,KK,DT,TMX,idnode); 
-            } else {
-                funcion(div,KK,DT,TMX,idnode);//cambiar
-            }
-            MPI::COMM_WORLD.Gather(TMX,div,MPI::INT,TMX1,div, MPI::INT,0); 
-            
+            cout << xejecutar->getsize() << ":" << div << endl;
+            if (flag ||  (!flag && idnode!=numtask-1) ){     
+                for (int i=0;i<div;i++){
+                    xejecutar->runit(i,idnode); //El 1 al final debe cambiar
+                }    
+            } /*else {  //Necesito recalcular que hacer con la parte que queda pendiente por calcular
+                for(int i=0;i<IA-idn*div;i++){ 
+                    TMX1[i]=sqrt(KK)*DT*(i+idn*div);
+                }  
+            } */           
+                     
             return;
         }
 

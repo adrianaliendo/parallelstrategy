@@ -4,17 +4,20 @@
 #include "ejecutor.h"
 #include "omp.h"
 #include <iostream>
-using namespace std;
-
+#include <mpi.h>
+#include <stdio.h>
 #include <string>
+using namespace std;
 
 class OpenMPejecutor : public ejecutor {
 public:
-    
-	virtual void ejecutar ( void (*funcion)(int, int, int, int*, int), int IA, int KK, int DT, int *TMX1 ){
-            cout << "Opcion OpenMP" << endl;
-            #pragma omp parallel //for
-            funcion(IA,KK,DT,TMX1,0);//Considerando que la ejecucion solo lo hace el nodo principal
+	virtual void ejecutar (procedimiento* xejecutar){//void (*funcion)(int, int, int, int*, int, int), int IA, int KK, int DT, int *TMX1 ){
+            setProcedimiento(xejecutar);
+            cout <<xejecutar->getsize() << endl;
+            #pragma omp parallel for
+            for (int i=0;i<xejecutar->getsize();i++){
+                xejecutar->runit(i,1); //El 1 al final debe cambiar
+            }    
             return;
         }
 

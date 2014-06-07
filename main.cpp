@@ -9,29 +9,51 @@
 #include <iostream>
 #include <string.h>
 #include <mpi.h>
+#include <math.h>
 #include "omp.h"
 #include "ejecucion.h"
 #include "ejecutor.h"
 #include "CUDAejecutor.h"
 #include "MPIejecutor.h"
 #include "OpenMPejecutor.h"
+#include "procedimiento.h"
+#include "proc0.h"
+#include "proc1.h"
 
 using namespace std;
 
-void suma(int IA, int KK, int DT, int *TMX1, int idn){
-    for (int i=0;i<IA;i++){
-         TMX1[i]=KK*DT*(i+idn*IA); 
-    }    
+void suma(int IA, int KK, int DT, int idn, int numt, int *TMX1){
+    int div=ceil((float)IA/numt);
+    int mod=IA%numt;
+    bool flag;
+
+    if(mod==0) flag=true;
+    else flag=false;
+
+    if (flag ||  (!flag && idn!=numt-1) ){     
+        for (int i=0;i<div;i++){
+             TMX1[i]=sqrt(KK)*DT*(i+idn*IA); 
+        }    
+    } else {
+        for(int i=0;i<IA-idn*div;i++){ 
+            TMX1[i]=sqrt(KK)*DT*(i+idn*div);
+        }  
+    }
     return;
 }
 
-void sumagpu(int IA, int KK, int DT, int *TMX1, int idn){
+void sumaf(int IA, int KK, int DT, int i, int numt, int *TMX1){
+    TMX1[i]=sqrt(KK)*DT*(i+numt*IA); 
+    return;
+}
+
+void sumagpu(int IA, int KK, int DT, int idn, int numt, int *TMX1){
 //#if CUDA
     //Aqui deberia agregar la version de CUDA
 
 //#else
     for (int i=0;i<IA;i++){
-         TMX1[i]=KK*DT*i; 
+         TMX1[i]=sqrt(KK)*DT*i; 
     }    
 //#endif
     return;
@@ -56,85 +78,66 @@ int main(int argc, char** argv) {
     
     try{
         int idnode = MPI::COMM_WORLD.Get_rank();
-        cout << idnode << endl;
+        //cout << "idnode:" << idnode << endl;
 
         //Datos asociados al problema        
-        void (*para_determinar_estrategia)(int IA, int KK, int DT, int *TMX1, int idn);
-        int IA=1024;//*1024; //Pendiente con el tamanio 1024*1024 que es muy grande
+        int IA=10000;//*1024; //Pendiente con el tamanio 1024*1024 que es muy grande
         int TMX1[IA];
         int KK=5;
         int DT=1;
         double inicio;
         double final;
+        int idn=1;//Debo cambiar por el id del nodo que ejecuta
+        int numt=1;//Debo cambiar por el numero de nodos que se estan usando
             
-        //Defino un conjunto de objetos que me serviran de base para definir la estrategia]
+        //Defino un conjunto de objetos que me serviran de base para definir la estrategia
         MPIejecutor muestraMPI;
         CUDAejecutor muestraCUDA;
         OpenMPejecutor muestraOpenMP;
-
-
-        //Defino el objeto que hara uso de la estrategia seleccionada
-        //Primera version
-        /*inicio=MPI::Wtime();
-        para_determinar_estrategia=suma;
-        ejecucion auxiliar(&muestraMPI); //Lo inicializo con la version para MPI
-        auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
-        final=MPI::Wtime();
-        if(idnode==0){
-            cout << "Ejecutado (MPI) en:" << (final - inicio)*1000 << ": ms" << endl;
-        }
         
-        if(idnode==0){
-            inicio=MPI::Wtime();
-            para_determinar_estrategia=suma;
-            auxiliar.setEjecutor(&muestraOpenMP);
-            auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
-            final=MPI::Wtime();
-            cout << "Ejecutado (OpenMP) en:" << (final - inicio)*1000 << ": ms" << endl;
-        }
-
-        if(idnode==0){
-            inicio=MPI::Wtime();
-            para_determinar_estrategia=sumagpu;
-            auxiliar.setEjecutor(&muestraCUDA); //Si ahora lo quiero ejecutar con otra estrategia, cambio el objeto ejecutor
-            auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
-            final=MPI::Wtime();
-            cout << "Ejecutado (CUDA) en:" << (final - inicio)*1000 << ": ms" << endl;
-        }*/
-        
+        //Defino otro conjunto de objetos que me serviran de base para definir las funciones a ser ejecutadas
+        proc1 muestraF1(sumaf,IA,KK,DT,TMX1);
+        proc1 muestraF3(sumagpu,IA,KK,DT,TMX1);
+        proc1 muestraF2(sumaf,IA,KK,DT,TMX1);
+                
         inicio=MPI::Wtime();
         ejecucion auxiliar(&muestraOpenMP); //Como por defecto
         switch (op){
-            case 'o':   para_determinar_estrategia=suma;
-                        auxiliar.setEjecutor(&muestraOpenMP); //Lo inicializo con la version para MPI
+            case 'o':   //Esta opcion ejecutara la suma  usando la opcion de OpenMP,
+                        //Esta opcion usara la version simple de la suma
+                        auxiliar.setEjecutor(&muestraOpenMP); //Lo inicializo con la version para OpenMP
+                        auxiliar.Ejecuta(&muestraF2);
                         break;
                         
-            case 'c':   para_determinar_estrategia=sumagpu;
-                        auxiliar.setEjecutor(&muestraCUDA); //Lo inicializo con la version para MPI
+            case 'c':   //Esta opcion ejecutara la suma  usando la opcion de CUDA,
+                        //Esta opcion usara la segunda version de la suma
+                        auxiliar.setEjecutor(&muestraCUDA); //Lo inicializo con la version para CUDA
+                        auxiliar.Ejecuta(&muestraF3);
                         break;
                         
             case 'n':
             case 'm':
-            default:    para_determinar_estrategia=suma;
+            default:    //Esta opcion ejecutara la suma  usando la opcion de MPI,
+                        //Esta opcion usara la primera version de la suma
                         auxiliar.setEjecutor(&muestraMPI); //Lo inicializo con la version para MPI
+                        auxiliar.Ejecuta(&muestraF1);
                         break;        
         }
-        auxiliar.Ejecuta(para_determinar_estrategia,IA,KK,DT,TMX1);
+        cout << "TMX1:" << TMX1[IA-1] << ":" << endl;                        
         final=MPI::Wtime();
         if(idnode==0){
             cout << "Ejecutado (" << op << ") en:" << (final - inicio)*1000 << ": ms" << endl;
         }
                 
-        
-
-    } catch(MPI::Exception e) {
-        cout << "MPI ERROR: " << e.Get_error_code() << " - " << e.Get_error_string() << std::endl;
+       
+    } catch(MPI::Exception e) {//Corresponde al MPI::Init
+        cout << "MPI ERROR (Init): " << e.Get_error_code() << " - " << e.Get_error_string() << std::endl;
     }
 
     try {
         MPI::Finalize();
-    } catch (MPI::Exception e) {
-        cout << "MPI ERROR(F): " << e.Get_error_code() << " - " << e.Get_error_string() << std::endl;
+    } catch (MPI::Exception e) { //Corresponde al MPI::Finalize
+        cout << "MPI ERROR (Finalize): " << e.Get_error_code() << " - " << e.Get_error_string() << std::endl;
     }
     
  

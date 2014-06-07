@@ -23,9 +23,12 @@ public:
             m_estrategia=estrategia;
         }
 
-	void Ejecuta ( void (*funcion)(int, int, int, int*, int), int IA, int KK, int DT, int *TMX1 ){
+	/*void Ejecuta ( void (*funcion)(int, int, int, int*, int, int), int IA, int KK, int DT, int *TMX1 ){
             m_estrategia->ejecutar(funcion, IA, KK, DT, TMX1);
-        }
+        }*/
+	void Ejecuta (procedimiento* xejecutar) {
+            m_estrategia->ejecutar(xejecutar);
+	}        
 
 };
 
